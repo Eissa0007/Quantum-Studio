@@ -1,0 +1,37 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUser() {
+      let data = incoming();
+      return data.keys().hasAll(['email']) && 
+             data.email is string && data.email.size() <= 200;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser() && incoming().keys().size() <= 2;
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidUser() && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'email']);
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+  }
+}
