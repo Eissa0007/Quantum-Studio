@@ -1,20 +1,39 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+---
+title: Quantum Studio
+emoji: 🌌
+colorFrom: purple
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
 
-# Run and deploy your AI Studio app
+# Quantum Studio v7.0 "Collective"
 
-This contains everything you need to run your app locally.
+Quantum Studio is a cloud-based collaborative design engine for spatial and vector graphics. 
 
-View your app in AI Studio: https://ai.studio/apps/f64da254-3d32-413c-a1d4-c05f5b1d007d
+This repository is configured specifically for **Hugging Face Spaces** Docker deployment. It runs an internal backend node providing CRDT mesh networks via WebSockets and Nginx handling the static frontend and acting as a reverse-proxy—all mapped strictly to port `7860`.
 
-## Run Locally
+## Architecture Details for Hugging Face
 
-**Prerequisites:**  Node.js
+To comply with Hugging Face Space security protocols:
+- **Port Compliance**: Only port `7860` is exposed. 
+- **Server Internalization**: The Express/Hocuspocus backend is strictly bound to `127.0.0.1:3001` to prevent unauthorized side-channel requests. Nginx intercepts traffic on `7860` and proxies the `/collab` path internally to `3001`.
+- **Gzip & Caching**: Pre-configured in `nginx.conf` for optimized multi-asset delivery.
 
+## Local Development
+If running locally:
+1. `npm install`
+2. Run backend manually, or `npm run dev` for frontend. Note that local dev server proxy points `/collab` to port `7860`, so Nginx would need to be running, or update `vite.config.ts` dev server proxy to target the backend directly.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Environment Variables
+The following secrets should be placed in your Space settings:
+
+| Variable | Description |
+| --- | --- |
+| `GEMINI_API_KEY` | Key for GenAI suggestions and predictive layouts |
+| `SUPABASE_URL` | Application configuration data store |
+| `SUPABASE_KEY` | Service access key |
+
+## License
+MIT
