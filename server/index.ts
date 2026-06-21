@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { Server } from '@hocuspocus/server';
+import path from 'path';
 
 const app = express();
 const server = createServer(app);
@@ -42,14 +43,36 @@ server.on('upgrade', (request, socket, head) => {
   }
 });
 
-// STRICT REQUIREMENT: Listen ONLY on localhost:3001
-const PORT = 3001;
-const HOST = '127.0.0.1';
+const isCloudRun = process.argv.includes('--cloudrun');
 
-server.listen(PORT, HOST, () => {
-  console.log(`Internal Collab Server running on http://${HOST}:${PORT}`);
-  console.log(`WebSocket path ready at ws://${HOST}:${PORT}/collab`);
-});
+async function startServer() {
+  if (isCloudRun || process.env.NODE_ENV === 'production') {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  } else {
+    const { createServer: createViteServer } = await import('vite');
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  }
+
+  // Determine port: Cloud Run/AI Studio Dev expects 3000
+  const isPublicFacing = isCloudRun || process.env.NODE_ENV !== 'production';
+  const PORT = isPublicFacing ? parseInt(process.env.PORT || '3000') : 3001;
+  const HOST = isPublicFacing ? '0.0.0.0' : '127.0.0.1';
+
+  server.listen(PORT, HOST, () => {
+    console.log(`Internal Collab Server running on http://${HOST}:${PORT}`);
+    console.log(`WebSocket path ready at ws://${HOST}:${PORT}/collab`);
+  });
+}
+
+startServer();
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
