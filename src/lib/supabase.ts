@@ -1,12 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
+import { getEnvVar } from '../utils/envManager';
 
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || '';
+const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY') || '';
 
 // Fallback to avoid breaking Local Storage operations if env vars are missing
 export const supabase = supabaseUrl && supabaseAnonKey 
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
+
 
 export const checkSupabaseConnection = async () => {
   if (!supabase) {

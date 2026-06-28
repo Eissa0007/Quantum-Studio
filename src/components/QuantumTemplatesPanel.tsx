@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import { deserializeCanvas } from '../utils/canvasSerializer';
 import { Search, Heart, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { getRecommendedTemplates } from '../utils/templateRecommender';
-import { seedTemplatesIfEmpty } from '../utils/templateSeeder';
+import { seedTemplatesIfEmpty, defaultTemplates } from '../utils/templateSeeder';
 import { useAuth } from './AuthProvider';
 
 export const QuantumTemplatesPanel = () => {
@@ -36,7 +36,15 @@ export const QuantumTemplatesPanel = () => {
   };
 
   const fetchTemplates = async () => {
-    if (!supabase) return;
+    if (!supabase) {
+      // Offline fallback: filter default templates locally
+      let filtered = defaultTemplates;
+      if (category !== 'All') {
+        filtered = defaultTemplates.filter(t => t.category === category);
+      }
+      setTemplates(filtered);
+      return;
+    }
     try {
       let query = supabase.from('templates').select('*');
       if (category !== 'All') {
@@ -44,9 +52,15 @@ export const QuantumTemplatesPanel = () => {
       }
       const { data, error } = await query.limit(20);
       if (error) throw error;
-      setTemplates(data || []);
+      setTemplates(data && data.length > 0 ? data : defaultTemplates);
     } catch (err) {
-      console.error('Failed to load templates', err);
+      console.warn('Failed to load templates from Supabase, falling back to local defaults:', err);
+      // Fallback
+      let filtered = defaultTemplates;
+      if (category !== 'All') {
+        filtered = defaultTemplates.filter(t => t.category === category);
+      }
+      setTemplates(filtered);
     }
   };
 
@@ -56,40 +70,82 @@ export const QuantumTemplatesPanel = () => {
   };
 
   const fetchFavorites = async () => {
-    if (!supabase || !user) return;
+    if (!user) return;
+    
+    // Attempt database load if supabase is available
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('template_favorites')
+          .select('template_id')
+          .eq('user_id', user.uid);
+          
+        if (!error && data) {
+          const ids = data.map(d => d.template_id);
+          setFavorites(ids);
+          localStorage.setItem(`quantum_favorites_${user.uid}`, JSON.stringify(ids));
+          return;
+        } else if (error) {
+          console.warn('Database connection warning during fetchFavorites:', error.message);
+        }
+      } catch (err) {
+        console.warn('Failed to load favorites from Supabase, attempting local fallback...', err);
+      }
+    }
+
+    // Fallback to localStorage
     try {
-      const { data, error } = await supabase
-        .from('template_favorites')
-        .select('template_id')
-        .eq('user_id', user.uid);
-        
-      if (error) throw error;
-      setFavorites(data.map(d => d.template_id));
-    } catch (err) {
-      console.error('Failed to load favorites', err);
+      const saved = localStorage.getItem(`quantum_favorites_${user.uid}`);
+      if (saved) {
+        setFavorites(JSON.parse(saved));
+      } else {
+        setFavorites([]);
+      }
+    } catch (e) {
+      setFavorites([]);
     }
   };
 
   const toggleFavorite = async (e: React.MouseEvent, templateId: string) => {
     e.stopPropagation();
-    if (!supabase || !user) return;
+    if (!user) return;
     
+    const isFav = favorites.includes(templateId);
+    const newFavorites = isFav 
+      ? favorites.filter(id => id !== templateId)
+      : [...favorites, templateId];
+
+    // Optimistically update local state & local storage
+    setFavorites(newFavorites);
     try {
-      if (favorites.includes(templateId)) {
-        await supabase
-          .from('template_favorites')
-          .delete()
-          .eq('user_id', user.uid)
-          .eq('template_id', templateId);
-        setFavorites(favorites.filter(id => id !== templateId));
-      } else {
-        await supabase
-          .from('template_favorites')
-          .insert({ user_id: user.uid, template_id: templateId });
-        setFavorites([...favorites, templateId]);
+      localStorage.setItem(`quantum_favorites_${user.uid}`, JSON.stringify(newFavorites));
+    } catch (e) {
+      console.warn('Failed to save favorites to localStorage', e);
+    }
+
+    // Sync with database if supabase is available
+    if (supabase) {
+      try {
+        if (isFav) {
+          const { error } = await supabase
+            .from('template_favorites')
+            .delete()
+            .eq('user_id', user.uid)
+            .eq('template_id', templateId);
+          if (error) {
+            console.warn('Failed to delete favorite from database:', error.message);
+          }
+        } else {
+          const { error } = await supabase
+            .from('template_favorites')
+            .insert({ user_id: user.uid, template_id: templateId });
+          if (error) {
+            console.warn('Failed to insert favorite into database:', error.message);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to sync favorite toggle with Supabase:', err);
       }
-    } catch (err) {
-      console.error('Failed to toggle favorite', err);
     }
   };
 

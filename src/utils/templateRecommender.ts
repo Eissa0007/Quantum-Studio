@@ -1,7 +1,11 @@
 import { supabase } from '../lib/supabase';
+import { defaultTemplates } from './templateSeeder';
 
 export const getRecommendedTemplates = async (userId?: string) => {
-  if (!supabase) return [];
+  if (!supabase) {
+    // Return a subset of default templates as recommendations in offline/demo mode
+    return [...defaultTemplates].sort(() => 0.5 - Math.random()).slice(0, 6);
+  }
   
   try {
     // In a real application, this would use a more complex recommendation algorithm
@@ -19,6 +23,7 @@ export const getRecommendedTemplates = async (userId?: string) => {
     return data.sort(() => 0.5 - Math.random());
   } catch (error) {
     console.error('Error fetching recommendations:', error);
-    return [];
+    // Return a local subset fallback on database errors
+    return [...defaultTemplates].sort(() => 0.5 - Math.random()).slice(0, 6);
   }
 };

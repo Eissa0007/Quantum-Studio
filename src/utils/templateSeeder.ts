@@ -1,8 +1,9 @@
 import { supabase } from '../lib/supabase';
 
-// Generate 50 dummy templates across categories
+// Generate 50 dummy templates across categories with stable unique IDs
 export const defaultTemplates = [
   ...Array(20).fill(0).map((_, i) => ({
+    id: `default-social-${i}`,
     title: `قالب بوست اجتماعي ${i + 1}`,
     category: 'Social Media',
     tags: ['instagram', 'facebook', 'post', i % 2 === 0 ? 'business' : 'personal'],
@@ -11,6 +12,7 @@ export const defaultTemplates = [
     is_pro: false
   })),
   ...Array(15).fill(0).map((_, i) => ({
+    id: `default-marketing-${i}`,
     title: `قالب تسويقي ${i + 1}`,
     category: 'Marketing',
     tags: ['flyer', 'brochure', 'poster'],
@@ -19,6 +21,7 @@ export const defaultTemplates = [
     is_pro: i % 3 === 0
   })),
   ...Array(10).fill(0).map((_, i) => ({
+    id: `default-doc-${i}`,
     title: `قالب مستند ${i + 1}`,
     category: 'Documents',
     tags: ['resume', 'cv', 'letter'],
@@ -27,6 +30,7 @@ export const defaultTemplates = [
     is_pro: false
   })),
   ...Array(5).fill(0).map((_, i) => ({
+    id: `default-edu-${i}`,
     title: `قالب تعليمي ${i + 1}`,
     category: 'Education',
     tags: ['worksheet', 'certificate'],

@@ -1,4 +1,5 @@
 import { setFeatureStatus } from './fixTracker';
+import { getEnvVar } from './envManager';
 
 export interface ChatMessage {
   id: string;
@@ -9,7 +10,7 @@ export interface ChatMessage {
 
 export async function askAIAssistant(messages: ChatMessage[]): Promise<string> {
   setFeatureStatus('ai-assistant', 'in-progress');
-  const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || '';
+  const apiKey = getEnvVar('VITE_GEMINI_API_KEY') || '';
 
   if (messages.length === 0) {
     setFeatureStatus('ai-assistant', 'fixed');

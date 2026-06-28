@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # جلب التاريخ الكامل مطلوب لدفع (push) صحيح
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,15 +32,5 @@ jobs:
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
-          
-          # Add Hugging Face as remote
           git remote add huggingface https://new-eissa:$HF_TOKEN@huggingface.co/spaces/new-eissa/quantum-studio
-          
-          # Fetch the remote branch
-          git fetch huggingface main
-          
-          # Merge with unrelated histories (allow different commit histories)
-          git merge huggingface/main --allow-unrelated-histories --no-edit || true
-          
-          # Push with force-with-lease (safe force push)
           git push huggingface main:main --force-with-lease

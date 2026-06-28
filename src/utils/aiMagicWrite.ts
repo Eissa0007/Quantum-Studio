@@ -1,8 +1,9 @@
 import { setFeatureStatus } from './fixTracker';
+import { getEnvVar } from './envManager';
 
 export async function generateText(prompt: string, tone: string = 'professional', language: string = 'ar'): Promise<string> {
   setFeatureStatus('magic-write', 'in-progress');
-  const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || '';
+  const apiKey = getEnvVar('VITE_GEMINI_API_KEY') || '';
 
   if (!prompt || prompt.trim() === '') {
     setFeatureStatus('magic-write', 'fixed');
